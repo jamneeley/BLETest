@@ -32,6 +32,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import com.example.bletest.ui.theme.BLETestTheme
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.shouldShowRationale
 
 class MainActivity : ComponentActivity() {
 
@@ -47,8 +51,6 @@ class MainActivity : ComponentActivity() {
     )
 
     val REQUEST_CODE = 1001
-    var hasPermissions by mutableStateOf(false)
-    var showSettingsInstructions by mutableStateOf(false)
     var bluetoothDevices: MutableList<BluetoothDevice> = mutableListOf()
 
     private val scanCallback = object: ScanCallback() {
@@ -93,72 +95,58 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             BLETestTheme {
-                if
-                BluetoothContent(hasPermissions,
-                    showSettingsInstructions,
-                    makeRequest = { makePermissionsRequest() },
+                BluetoothContentWithPermissions(
                     scanForBLE = { scanForBLE() }
-            }
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-        deviceId: Int
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
-
-        if (requestCode == REQUEST_CODE) {
-            if (grantResults.contains(-1)) {
-                val shouldShowRationaleForAny = permissions.any { permission ->
-                    ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
-                }
-                showSettingsInstructions = !shouldShowRationaleForAny
-            } else {
-                hasPermissions = !grantResults.contains(-1)
+                )
             }
         }
     }
 }
 
+
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-private fun BluetoothContent(
-    hasPermissions: Boolean,
-    showSettingsInstructions: Boolean,
-    makeRequest: () -> Unit,
+fun BluetoothContentWithPermissions(
     scanForBLE: () -> Unit
 ) {
+
+    val permissionsState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    )
+
+    // Detect if user permanently denied any permission to show settings instructions
+    val showSettingsInstructions = permissionsState.permissions.any {
+        !it.status.isGranted && !it.status.shouldShowRationale
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        if (hasPermissions) {
-            Button(onClick = {
-
-            }) {
-                Text("Scan for devices")
+        when {
+            permissionsState.allPermissionsGranted -> {
+                Button(onClick = { scanForBLE() }) {
+                    Text("Scan for devices")
+                }
             }
-        } else if (showSettingsInstructions) {
-            Text("Please change bluetooth settings for this app")
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Need to grant permissions for bluetooth")
-
-                Text("You may")
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(onClick = {
-                    makeRequest()
-                }) {
-                    Text("Request Permissions")
+            showSettingsInstructions -> {
+                Text("Please change Bluetooth settings for this app in system settings.")
+            }
+            else -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Need to grant permissions for Bluetooth")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { permissionsState.launchMultiplePermissionRequest() }) {
+                        Text("Request Permissions")
+                    }
                 }
             }
         }
@@ -168,11 +156,11 @@ private fun BluetoothContent(
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Preview(showBackground = true)
 @Composable
-fun TestListPreview() {
+fun BluetoothContentWithPermissions_Preview() {
     BLETestTheme {
-        Scaffold {
-            BluetoothContent(false, false) { }
-        }
+        // Just call it normally — but this won’t show correct UI due to no runtime permissions in preview
+        BluetoothContentWithPermissions(
+            scanForBLE = {}
+        )
     }
 }
-
