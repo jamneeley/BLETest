@@ -1,65 +1,120 @@
 package com.example.bletest
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.bletest.model.Person
+import androidx.core.app.ActivityCompat
 import com.example.bletest.ui.theme.BLETestTheme
 
 class MainActivity : ComponentActivity() {
+
+    val permissions = arrayOf(
+        Manifest.permission.BLUETOOTH_SCAN,
+        Manifest.permission.BLUETOOTH_CONNECT,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    )
+
+    val REQUEST_CODE = 1001
+    var hasPermissions by mutableStateOf(false)
+    var showSettingsInstructions by mutableStateOf(false)
+
+    private fun makePermissionsRequest() {
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+
+        makePermissionsRequest()
+
         setContent {
             BLETestTheme {
-                TestList()
+                BluetoothContent(hasPermissions, showSettingsInstructions) {
+                    makePermissionsRequest()
+                }
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+        deviceId: Int
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
+
+        if (requestCode == REQUEST_CODE) {
+            if (grantResults.contains(-1)) {
+                val shouldShowRationaleForAny = permissions.any { permission ->
+                    ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
+                }
+                showSettingsInstructions = !shouldShowRationaleForAny
+            } else {
+                hasPermissions = !grantResults.contains(-1)
             }
         }
     }
 }
 
 @Composable
-private fun TestList() {
-    var selectedPerson: Person? by rememberSaveable { mutableStateOf(null) }
-    val people = listOf(
-        Person(name = "Janice", age = 30),
-        Person(name = "Steve", age = 71),
-        Person(name = "Barbara", 54),
-        Person(name = "Ryan", age = 3),
-        Person(name = "Mike", 46),
-        Person(name = "Jimmy", age = 91),
-        Person(name = "Fred", 44),
-    )
+private fun BluetoothContent(
+    hasPermissions: Boolean,
+    showSettingsInstructions: Boolean,
+    makeRequest: () -> Unit
+) {
 
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        people.forEach { person ->
-            PersonSelectionRow(
-                person,
-                isSelected = (selectedPerson == person),
-                onPersonSelected = { person ->
-                    selectedPerson = person
+        if (hasPermissions) {
+            Button(onClick = {
+
+            }) {
+                Text("Scan for devices")
+            }
+        } else if (showSettingsInstructions) {
+            Text("Please change bluetooth settings for this app")
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Need to grant permissions for bluetooth")
+
+                Text("You may")
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(onClick = {
+                    makeRequest()
+                }) {
+                    Text("Request Permissions")
                 }
-            )
+            }
         }
     }
 }
@@ -70,30 +125,8 @@ private fun TestList() {
 fun TestListPreview() {
     BLETestTheme {
         Scaffold {
-            TestList()
+            BluetoothContent(false, false) { }
         }
     }
 }
 
-@Composable
-fun PersonSelectionRow(
-    person: Person,
-    isSelected: Boolean,
-    onPersonSelected: (Person) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .clickable { onPersonSelected(person) },
-    ) {
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(person.name)
-            Text("${person.age}")
-        }
-
-        RadioButton(
-            selected = isSelected,
-            onClick = { onPersonSelected(person) }
-        )
-    }
-}
