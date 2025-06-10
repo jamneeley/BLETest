@@ -2,10 +2,17 @@ package com.example.bletest
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +35,11 @@ import com.example.bletest.ui.theme.BLETestTheme
 
 class MainActivity : ComponentActivity() {
 
+    var bluetoothManager: BluetoothManager? = null
+    var blueToothAdapter: BluetoothAdapter? = null
+
+    val errorTag = "ERROR!"
+
     val permissions = arrayOf(
         Manifest.permission.BLUETOOTH_SCAN,
         Manifest.permission.BLUETOOTH_CONNECT,
@@ -37,22 +49,55 @@ class MainActivity : ComponentActivity() {
     val REQUEST_CODE = 1001
     var hasPermissions by mutableStateOf(false)
     var showSettingsInstructions by mutableStateOf(false)
+    var bluetoothDevices: MutableList<BluetoothDevice> = mutableListOf()
+
+    private val scanCallback = object: ScanCallback() {
+        override fun onScanResult(callbackType: Int, result: ScanResult?) {
+            super.onScanResult(callbackType, result)
+
+            result?.device?.let { device ->
+                bluetoothDevices.add(device)
+            }
+        }
+
+        override fun onScanFailed(errorCode: Int) {
+            super.onScanFailed(errorCode)
+            Log.e(errorTag, "Scan failed with error code $errorCode")
+        }
+    }
 
     private fun makePermissionsRequest() {
         ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE)
     }
 
+    private fun initBLE() {
+        bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        blueToothAdapter = bluetoothManager?.adapter
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    private fun scanForBLE() {
+        if (blueToothAdapter?.isEnabled == true) {
+            blueToothAdapter!!.bluetoothLeScanner.startScan(scanCallback)
+        } else {
+            Log.d("", "Prompt user to turn on bluetooth")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        initBLE()
 
         makePermissionsRequest()
 
         setContent {
             BLETestTheme {
-                BluetoothContent(hasPermissions, showSettingsInstructions) {
-                    makePermissionsRequest()
-                }
+                if
+                BluetoothContent(hasPermissions,
+                    showSettingsInstructions,
+                    makeRequest = { makePermissionsRequest() },
+                    scanForBLE = { scanForBLE() }
             }
         }
     }
@@ -82,7 +127,8 @@ class MainActivity : ComponentActivity() {
 private fun BluetoothContent(
     hasPermissions: Boolean,
     showSettingsInstructions: Boolean,
-    makeRequest: () -> Unit
+    makeRequest: () -> Unit,
+    scanForBLE: () -> Unit
 ) {
 
     Box(
