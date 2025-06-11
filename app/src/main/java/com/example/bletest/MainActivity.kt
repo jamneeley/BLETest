@@ -24,13 +24,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.bletest.Util.BluetoothManagerWrapper
 import com.example.bletest.Util.getDisplayName
 import com.example.bletest.ui.theme.BLETestTheme
 
@@ -41,14 +41,13 @@ sealed class Screen(val route: String) {
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var bmWrapper: BluetoothManagerWrapper
-
-    private val bluetoothViewModel = BluetoothViewModel()
+    private lateinit var bluetoothViewModel: BluetoothViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        bmWrapper = BluetoothManagerWrapper(this)
+
+        bluetoothViewModel = BluetoothViewModel(this)
 
         setContent {
             BLETestTheme {
@@ -58,9 +57,10 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = Screen.Bluetooth.route) {
                     composable(Screen.Bluetooth.route) {
                         BluetoothContentWithPermissions(
-                            wrapper = bmWrapper,
+                            viewModel = bluetoothViewModel,
                             onResultClick = { result ->
                                 bluetoothViewModel.selectResult(result)
+                                bluetoothViewModel.connectToGatt()
                                 navController.navigate(Screen.DeviceDetail.route)
                             }
                         )
@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun BluetoothContentWithPermissions(
-    wrapper: BluetoothManagerWrapper,
+    viewModel: BluetoothViewModel,
     onResultClick: (ScanResult) -> Unit
 ) {
     val permissionsState = rememberMultiplePermissionsState(
@@ -100,7 +100,7 @@ fun BluetoothContentWithPermissions(
     }
 
     if (permissionsState.allPermissionsGranted) {
-        BluetoothScreen(wrapper = wrapper, onResultClick = onResultClick)
+        BluetoothScreen(viewModel = viewModel, onResultClick = onResultClick)
     } else {
         BluetoothPermissionRequest(
             onRequestPermissions = { permissionsState.launchMultiplePermissionRequest() },
@@ -138,12 +138,12 @@ fun BluetoothPermissionRequest(
 
 @Composable
 fun BluetoothScreen(
-    wrapper: BluetoothManagerWrapper,
+    viewModel: BluetoothViewModel,
     onResultClick: (ScanResult) -> Unit
 ) {
 
-    val results by wrapper.scanResults.collectAsState()
-    val isScanning by wrapper.isScanning.collectAsState()
+    val results by viewModel.bmWrapper.scanResults.collectAsState()
+    val isScanning by viewModel.bmWrapper.isScanning.collectAsState()
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -154,7 +154,7 @@ fun BluetoothScreen(
             Button(
                 modifier = Modifier.padding(16.dp),
                 onClick = {
-                    if (isScanning) wrapper.stopScan() else wrapper.scanForBLE()
+                    if (isScanning) viewModel.bmWrapper.stopScan() else viewModel.bmWrapper.scanForBLE()
                 }
             ) {
                 Text(if (isScanning) "Stop Scan" else "Start Scan")
@@ -163,6 +163,8 @@ fun BluetoothScreen(
             if (isScanning) {
                 Text("Scanning...")
             }
+
+            HorizontalDivider(thickness = 8.dp)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -183,8 +185,13 @@ fun BluetoothScreen(
 
 @Composable
 fun DeviceDetailScreen(
-    viewModel: BluetoothViewModel
+    viewModel: BluetoothViewModel,
 ) {
+
+    LaunchedEffect(Unit) {
+//        viewModel.
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center

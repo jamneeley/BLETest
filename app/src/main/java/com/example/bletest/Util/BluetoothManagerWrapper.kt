@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
+import android.content.pm.PackageManager
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,12 +27,13 @@ class BluetoothManagerWrapper(context: Context) {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             result?.let {
-
                 result.device?.let { device ->
-                    val currentList = _bluetoothDevices.value
-                    if (currentList.none { it.device.address == device.address }) {
-                        if (result.isConnectable) {
-                            _bluetoothDevices.value = currentList + result
+                    if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        val currentList = _bluetoothDevices.value
+                        if (currentList.none { it.device.address == device.address }) {
+                            if (result.isConnectable && result.isLionDevice()) {
+                                _bluetoothDevices.value = currentList + result
+                            }
                         }
                     }
                 }
