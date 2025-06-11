@@ -1,7 +1,6 @@
-package com.example.bletest
+package com.example.bletest.Util
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
@@ -18,18 +17,23 @@ class BluetoothManagerWrapper(context: Context) {
 
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
 
-    private val _bluetoothDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
-    val bluetoothDevices: StateFlow<List<BluetoothDevice>> = _bluetoothDevices
+    private val _bluetoothDevices = MutableStateFlow<List<ScanResult>>(emptyList())
+    val scanResults: StateFlow<List<ScanResult>> = _bluetoothDevices
 
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
-            result?.device?.let { device ->
-                val currentList = _bluetoothDevices.value
-                if (currentList.none { it.address == device.address }) {
-                    _bluetoothDevices.value = currentList + device
+            result?.let {
+
+                result.device?.let { device ->
+                    val currentList = _bluetoothDevices.value
+                    if (currentList.none { it.device.address == device.address }) {
+                        if (result.isConnectable) {
+                            _bluetoothDevices.value = currentList + result
+                        }
+                    }
                 }
             }
         }
