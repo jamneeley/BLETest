@@ -8,41 +8,51 @@ import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
-class BluetoothController(context: Context) {
+class BluetoothManagerWrapper(context: Context) {
 
     private val bluetoothManager: BluetoothManager =
         context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
 
-    val bluetoothDevices: MutableList<BluetoothDevice> = mutableListOf()
+    private val _bluetoothDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
+    val bluetoothDevices: StateFlow<List<BluetoothDevice>> = _bluetoothDevices
+
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             result?.device?.let { device ->
-                if (!bluetoothDevices.contains(device)) {
-                    bluetoothDevices.add(device)
+                val currentList = _bluetoothDevices.value
+                if (currentList.none { it.address == device.address }) {
+                    _bluetoothDevices.value = currentList + device
                 }
             }
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.e("BluetoothController", "Scan failed: $errorCode")
+            _isScanning.value = false
+            Log.e("BluetoothManagerWrapper", "Scan failed: $errorCode")
         }
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun scanForBLE() {
         if (bluetoothAdapter?.isEnabled == true) {
+            _isScanning.value = true
             bluetoothAdapter.bluetoothLeScanner.startScan(scanCallback)
         } else {
-            Log.w("BluetoothController", "Bluetooth is disabled.")
+            Log.w("BluetoothManagerWrapper", "Bluetooth is disabled.")
         }
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun stopScan() {
         bluetoothAdapter?.bluetoothLeScanner?.stopScan(scanCallback)
+        _isScanning.value = false
     }
 }

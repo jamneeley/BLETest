@@ -21,21 +21,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.example.bletest.ui.theme.BLETestTheme
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var bluetoothController: BluetoothController
+    private lateinit var bmWrapper: BluetoothManagerWrapper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        bluetoothController = BluetoothController(this)
+        bmWrapper = BluetoothManagerWrapper(this)
 
         setContent {
             BLETestTheme {
                 BluetoothContentWithPermissions(
-                    scanForBLE = { bluetoothController.scanForBLE() }
+                    wrapper = bmWrapper
                 )
             }
         }
@@ -45,7 +47,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun BluetoothContentWithPermissions(
-    scanForBLE: () -> Unit
+    wrapper: BluetoothManagerWrapper,
 ) {
     val permissionsState = rememberMultiplePermissionsState(
         permissions = listOf(
@@ -66,7 +68,7 @@ fun BluetoothContentWithPermissions(
     }
 
     if (permissionsState.allPermissionsGranted) {
-        BluetoothScreen(scanForBLE)
+        BluetoothScreen(wrapper = wrapper)
     } else {
         BluetoothPermissionRequest(
             onRequestPermissions = { permissionsState.launchMultiplePermissionRequest() },
@@ -104,17 +106,30 @@ fun BluetoothPermissionRequest(
 
 @Composable
 fun BluetoothScreen(
-    onScan: () -> Unit
+    wrapper: BluetoothManagerWrapper,
 ) {
+
+    val devices by wrapper.bluetoothDevices.collectAsState()
+    val isScanning by wrapper.isScanning.collectAsState()
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Bluetooth is ready")
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onScan) {
-                Text("Scan for Devices")
+            if (!isScanning && devices.isEmpty()) {
+                Text("Bluetooth is ready")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(onClick = {
+                    wrapper.scanForBLE()
+                }) {
+                    Text("Scan for Devices")
+                }
+            } else {
+                devices.forEach { device ->
+                    Text(text = device.name ?: "Unnamed Device")
+                }
             }
         }
     }
