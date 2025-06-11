@@ -4,6 +4,7 @@ import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.util.Log
@@ -30,6 +31,8 @@ class GattWrapper(val context: Context, val device: BluetoothDevice) {
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+
+            val list: ByteArray = byteArrayOf(0xF6.toByte())
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 val service = gatt.services
                 Log.d("", "")
@@ -39,9 +42,15 @@ class GattWrapper(val context: Context, val device: BluetoothDevice) {
 //                }
             }
         }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
+            super.onCharacteristicChanged(gatt, characteristic, value)
+        }
     }
-
-
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun connect() {

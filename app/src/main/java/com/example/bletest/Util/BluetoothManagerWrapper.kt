@@ -3,7 +3,9 @@ import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
@@ -49,8 +51,24 @@ class BluetoothManagerWrapper(context: Context) {
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun scanForBLE() {
         if (bluetoothAdapter?.isEnabled == true) {
+            val scanner = bluetoothAdapter?.bluetoothLeScanner
+
+// Create your filters, for example filtering by device name or service UUID
+            val filters = listOf(
+                ScanFilter.Builder()
+                    .setDeviceName("MyDeviceName")  // example filter by name
+                    //.setServiceUuid(ParcelUuid.fromString("0000180D-0000-1000-8000-00805f9b34fb")) // filter by UUID
+                    .build()
+            )
+
+            val settings = ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .build()
+
+
             _isScanning.value = true
-            bluetoothAdapter.bluetoothLeScanner.startScan(scanCallback)
+            bluetoothAdapter.bluetoothLeScanner.startScan(filters, settings, scanCallback)
+
         } else {
             Log.w("BluetoothManagerWrapper", "Bluetooth is disabled.")
         }
