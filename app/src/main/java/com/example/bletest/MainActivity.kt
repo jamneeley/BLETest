@@ -28,11 +28,16 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.bletest.Util.calculateDistance
 import com.example.bletest.Util.getDisplayName
 import com.example.bletest.ui.theme.BLETestTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     data object Bluetooth : Screen("bluetooth")
@@ -56,12 +61,17 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(navController = navController, startDestination = Screen.Bluetooth.route) {
                     composable(Screen.Bluetooth.route) {
+
+                        val scope = rememberCoroutineScope()
+
                         BluetoothContentWithPermissions(
                             viewModel = bluetoothViewModel,
                             onResultClick = { result ->
-                                bluetoothViewModel.selectResult(result)
-                                bluetoothViewModel.connectToGatt()
-                                navController.navigate(Screen.DeviceDetail.route)
+                                scope.launch {
+                                    bluetoothViewModel.selectResult(result)
+                                    //need to stop scan when we connect to a device.
+                                    navController.navigate(Screen.DeviceDetail.route)
+                                }
                             }
                         )
                     }
@@ -142,8 +152,8 @@ fun BluetoothScreen(
     onResultClick: (ScanResult) -> Unit
 ) {
 
-    val results by viewModel.bmWrapper.scanResults.collectAsState()
-    val isScanning by viewModel.bmWrapper.isScanning.collectAsState()
+    val results by viewModel.bluetoothManagerWrapper.scanResults.collectAsState()
+    val isScanning by viewModel.bluetoothManagerWrapper.isScanning.collectAsState()
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -154,7 +164,7 @@ fun BluetoothScreen(
             Button(
                 modifier = Modifier.padding(16.dp),
                 onClick = {
-                    if (isScanning) viewModel.bmWrapper.stopScan() else viewModel.bmWrapper.scanForBLE()
+                    if (isScanning) viewModel.bluetoothManagerWrapper.stopScan() else viewModel.bluetoothManagerWrapper.scanForBLE()
                 }
             ) {
                 Text(if (isScanning) "Stop Scan" else "Start Scan")
@@ -174,7 +184,9 @@ fun BluetoothScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 items(results) { result ->
-                    Button(onClick = { onResultClick(result) }) {
+                    Button(onClick = {
+                        onResultClick(result)
+                    }) {
                         Text(result.getDisplayName())
                     }
                 }
@@ -189,15 +201,17 @@ fun DeviceDetailScreen(
 ) {
 
     LaunchedEffect(Unit) {
-//        viewModel.
+
     }
 
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.TopStart
     ) {
         viewModel.selectedResult?.let {
-            Text(it.getDisplayName())
+            Text("Name: ${it.getDisplayName()}")
+            Text("MAC: ${it.device.address}")
+            Text("Distance: ${it.calculateDistance()}")
         }
     }
 }

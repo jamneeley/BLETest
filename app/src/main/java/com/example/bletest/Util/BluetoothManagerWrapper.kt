@@ -1,5 +1,6 @@
 package com.example.bletest.Util
 import android.Manifest
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
@@ -10,6 +11,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.example.bletest.model.LionDeviceType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -27,13 +29,15 @@ class BluetoothManagerWrapper(context: Context) {
     val isScanning: StateFlow<Boolean> = _isScanning
 
     private val scanCallback = object : ScanCallback() {
+
+        @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             result?.let {
                 result.device?.let { device ->
-                    if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    if (context.hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
                         val currentList = _bluetoothDevices.value
                         if (currentList.none { it.device.address == device.address }) {
-                            if (result.isConnectable && result.isLionDevice()) {
+                            if (result.isConnectable && result.getDeviceType() == LionDeviceType.Safari) {
                                 _bluetoothDevices.value = currentList + result
                             }
                         }
@@ -51,24 +55,24 @@ class BluetoothManagerWrapper(context: Context) {
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun scanForBLE() {
         if (bluetoothAdapter?.isEnabled == true) {
-            val scanner = bluetoothAdapter?.bluetoothLeScanner
+            val scanner = bluetoothAdapter.bluetoothLeScanner
 
 // Create your filters, for example filtering by device name or service UUID
             val filters = listOf(
                 ScanFilter.Builder()
-                    .setDeviceName("MyDeviceName")  // example filter by name
+//                    .setDeviceName("MyDeviceName")  // example filter by name
                     //.setServiceUuid(ParcelUuid.fromString("0000180D-0000-1000-8000-00805f9b34fb")) // filter by UUID
                     .build()
             )
 
             val settings = ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY) //Scan for a brief period
+                .setScanMode(ScanSettings.MATCH_MODE_STICKY) //Scan for close proximity devices
                 .build()
 
 
             _isScanning.value = true
-            bluetoothAdapter.bluetoothLeScanner.startScan(filters, settings, scanCallback)
-
+            scanner.startScan(filters, settings, scanCallback)
         } else {
             Log.w("BluetoothManagerWrapper", "Bluetooth is disabled.")
         }
