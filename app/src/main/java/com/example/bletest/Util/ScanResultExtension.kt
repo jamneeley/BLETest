@@ -17,16 +17,6 @@ fun ScanResult.getDisplayName(): String {
 }
 
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-fun ScanResult.isLionDevice(): Boolean {
-    scanRecord?.deviceName?.let {
-        if (LionDeviceType.from(it) != null) {
-            return true
-        }
-    }
-    return false
-}
-
-@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 fun ScanResult.getDeviceType(): LionDeviceType? {
     scanRecord?.deviceName?.let {
         return LionDeviceType.from(it)

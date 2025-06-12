@@ -200,18 +200,22 @@ fun DeviceDetailScreen(
     viewModel: BluetoothViewModel,
 ) {
 
-    LaunchedEffect(Unit) {
-
-    }
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopStart
     ) {
-        viewModel.selectedResult?.let {
-            Text("Name: ${it.getDisplayName()}")
-            Text("MAC: ${it.device.address}")
-            Text("Distance: ${it.calculateDistance()}")
+        Column {
+            viewModel.selectedResult?.let {
+                Text("Name: ${it.getDisplayName()}")
+                Text("MAC: ${it.device.address}")
+                Text("Distance: ${it.calculateDistance()}")
+            }
+            viewModel.response?.let {
+                Text("Variant: ${it.variant}")
+                Text("Batter State: ${it.batteryState}")
+                Text("Battery Percentage: ${it.batteryPercent}")
+                Text("System State: ${it.systemState}")
+            }
         }
     }
 }
