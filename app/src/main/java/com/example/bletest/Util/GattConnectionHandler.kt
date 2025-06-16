@@ -80,7 +80,6 @@ class GattConnectionHandler(val context: Context, val device: BluetoothDevice, v
             status: Int
         ) {
             super.onCharacteristicWrite(gatt, characteristic, status)
-            Log.d("","")
         }
 
         //Only called once - once the connection is made there wont be any more negotiations with the peripheral

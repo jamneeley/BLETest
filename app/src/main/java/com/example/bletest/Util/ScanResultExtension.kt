@@ -26,7 +26,7 @@ fun ScanResult.getDeviceType(): LionDeviceType? {
 
 fun ScanResult.calculateDistance(): Double {
     val txPower = -59 //the expected rssi at 1 meter
-    val pathLossExponent = 3.0 // 2.0 for free space, 2.7-4.0 for indoors
+    val pathLossExponent = 3.5 // 2.0 for free space, 2.7-4.0 for indoors
 
     return 10.0.pow((txPower - rssi) / (10 * pathLossExponent))
 }

@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModel
 import com.example.bletest.Util.BluetoothManagerWrapper
 import com.example.bletest.Util.GattConnectionHandler
 import com.example.bletest.Util.getUByte
+import com.example.bletest.model.ViryAction
 import com.example.bletest.model.ViryDeviceVariant
 import com.example.bletest.model.ViryFunction
 import com.example.bletest.model.ViryRequest
@@ -27,7 +28,7 @@ class BluetoothViewModel(val context: Context) : ViewModel() {
     var gattHandler by mutableStateOf<GattConnectionHandler?>(null)
         private set
 
-    var response by mutableStateOf<ViryResponse?>(null)
+    var responses by mutableStateOf(mutableMapOf<ViryFunction, ViryResponse>())
         private set
 
     private fun processResponse(value: ByteArray): ViryResponse? {
@@ -77,10 +78,14 @@ class BluetoothViewModel(val context: Context) : ViewModel() {
     private suspend fun connectToGatt() {
         selectedResult?.device?.let { device ->
             gattHandler = GattConnectionHandler(context = context, device = device, onData = {
-                val processed = processResponse(it)
-                response = processed
+                processResponse(it)?.let { response ->
+                    val updated = responses.toMutableMap()
+                    updated[response.function] = response
+                    responses = updated
+                }
             })
             gattHandler!!.connect()
+            send(ViryRequest.AllData(ViryDeviceVariant.Safari))
         }
     }
 }

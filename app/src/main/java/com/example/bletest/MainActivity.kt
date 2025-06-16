@@ -216,7 +216,9 @@ fun DeviceDetailScreen(
                 Text("MAC: ${it.device.address}")
                 Text("Distance: ${it.calculateDistance()}")
             }
-            viewModel.response?.let { response ->
+
+            for (map in viewModel.responses) {
+                val response = map.value
                 Text("Variant: ${response.variant}")
                 (response as? ViryResponse.SafariBasicInfo)?.let {
                     Text("Batter State: ${it.batteryState}")
@@ -245,12 +247,23 @@ fun DeviceDetailScreen(
             }
 
             Button(onClick = {
-                viewModel.send(ViryRequest.PowerControl(ViryDeviceVariant.Safari, ViryAction.PowerOn))
+                viewModel.send(
+                    ViryRequest.PowerControl(
+                        ViryDeviceVariant.Safari,
+                        ViryAction.PowerOn
+                    )
+                )
             }) {
                 Text("Turn on")
             }
+
             Button(onClick = {
-                viewModel.send(ViryRequest.PowerControl(ViryDeviceVariant.Safari, ViryAction.PowerOff))
+                viewModel.send(
+                    ViryRequest.PowerControl(
+                        ViryDeviceVariant.Safari,
+                        ViryAction.PowerOff
+                    )
+                )
             }) {
                 Text("Turn off")
             }
@@ -261,7 +274,12 @@ fun DeviceDetailScreen(
                 Text("Turn on USB")
             }
             Button(onClick = {
-                viewModel.send(ViryRequest.UsbControl(ViryDeviceVariant.Safari, ViryAction.PowerOff))
+                viewModel.send(
+                    ViryRequest.UsbControl(
+                        ViryDeviceVariant.Safari,
+                        ViryAction.PowerOff
+                    )
+                )
             }) {
                 Text("Turn off USB")
             }
