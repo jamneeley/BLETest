@@ -34,6 +34,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.bletest.Util.calculateDistance
 import com.example.bletest.Util.getDisplayName
+import com.example.bletest.model.ViryAction
+import com.example.bletest.model.ViryDeviceVariant
+import com.example.bletest.model.ViryFunction
+import com.example.bletest.model.ViryRequest
+import com.example.bletest.model.ViryResponse
 import com.example.bletest.ui.theme.BLETestTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,8 +74,9 @@ class MainActivity : ComponentActivity() {
                             onResultClick = { result ->
                                 scope.launch {
                                     bluetoothViewModel.selectResult(result)
-                                    //need to stop scan when we connect to a device.
-                                    navController.navigate(Screen.DeviceDetail.route)
+                                    if (bluetoothViewModel.selectedResult != null) {
+                                        navController.navigate(Screen.DeviceDetail.route)
+                                    }
                                 }
                             }
                         )
@@ -210,12 +216,56 @@ fun DeviceDetailScreen(
                 Text("MAC: ${it.device.address}")
                 Text("Distance: ${it.calculateDistance()}")
             }
-            viewModel.response?.let {
-                Text("Variant: ${it.variant}")
-                Text("Batter State: ${it.batteryState}")
-                Text("Battery Percentage: ${it.batteryPercent}")
-                Text("System State: ${it.systemState}")
+            viewModel.response?.let { response ->
+                Text("Variant: ${response.variant}")
+                (response as? ViryResponse.SafariBasicInfo)?.let {
+                    Text("Batter State: ${it.batteryState}")
+                    Text("Battery Percentage: ${it.batteryPercent}")
+                    Text("System State: ${it.systemState}")
+                }
+                (response as? ViryResponse.ChargingInfo)?.let {
+                    Text("Charging State: ${it.chargeState}")
+                    Text("Charging Power: ${it.chargePower}")
+                }
+                (response as? ViryResponse.DischargingInfo)?.let {
+                    Text("Discharging State: ${it.dischargeState}")
+                }
+                (response as? ViryResponse.DcDischargingInfo)?.let {
+                    Text("Dc State: ${it.v12DischargeState}")
+                }
+                (response as? ViryResponse.V12DischargingInfo)?.let {
+                    Text("V12 State: ${it.v12DischargeState}")
+                }
+                (response as? ViryResponse.AlarmInfo)?.let {
+                    Text("Alarm State: ___")
+                }
+                (response as? ViryResponse.PowerControl)?.let {
+                    Text("Alarm State: ___")
+                }
             }
+
+            Button(onClick = {
+                viewModel.send(ViryRequest.PowerControl(ViryDeviceVariant.Safari, ViryAction.PowerOn))
+            }) {
+                Text("Turn on")
+            }
+            Button(onClick = {
+                viewModel.send(ViryRequest.PowerControl(ViryDeviceVariant.Safari, ViryAction.PowerOff))
+            }) {
+                Text("Turn off")
+            }
+
+            Button(onClick = {
+                viewModel.send(ViryRequest.UsbControl(ViryDeviceVariant.Safari, ViryAction.PowerOn))
+            }) {
+                Text("Turn on USB")
+            }
+            Button(onClick = {
+                viewModel.send(ViryRequest.UsbControl(ViryDeviceVariant.Safari, ViryAction.PowerOff))
+            }) {
+                Text("Turn off USB")
+            }
+
         }
     }
 }

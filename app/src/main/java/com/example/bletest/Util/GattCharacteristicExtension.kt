@@ -11,3 +11,8 @@ fun BluetoothGattCharacteristic.isNotifiable(): Boolean =
 fun BluetoothGattCharacteristic.containsProperty(property: Int): Boolean {
     return properties and property != 0
 }
+
+fun BluetoothGattCharacteristic.isWritable(): Boolean = containsProperty(BluetoothGattCharacteristic.PROPERTY_WRITE)
+
+fun BluetoothGattCharacteristic.isWritableWithoutResponse(): Boolean =
+    containsProperty(BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE)
